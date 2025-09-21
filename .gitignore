@@ -1,0 +1,18 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releasesBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Allure
+.allure/
+allure-results/
+build/reports/
