@@ -2,103 +2,104 @@ package tests;
 
 import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import pageobject.MainPage;
 import pageobject.LoginPage;
-import pageobject.RegistrationPage;
-import pageobject.ForgotPasswordPage;
+import api.UserApi;
+import utils.UserCleaner;
 
-import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.*;
-import static io.qameta.allure.Allure.step;
 
-/**
- * Проверка всех вариантов входа в аккаунт пользователя на сайте Stellar Burgers.
- * Реализованы сценарии:
- * 1. Вход по кнопке "Войти в аккаунт" на главной странице.
- * 2. Вход через кнопку "Личный кабинет" на главной странице.
- * 3. Вход через ссылку "Войти" внизу формы регистрации.
- * 4. Вход через ссылку "Войти" внизу формы восстановления пароля.
- */
 @Epic("Stellar Burgers UI")
-@Feature("Login")
-@Owner("Твоё Имя")
+@Feature("Login Different Ways")
 public class LoginDifferentWaysTest {
 
-    private final String EMAIL = "screwy4@yandex.ru";
-    private final String PASSWORD = "12345678";
+    private static final String BASE_URL = "https://stellarburgers.nomoreparties.site";
+    private static final String EMAIL = "testuser" + System.currentTimeMillis() + "@yandex.ru";
+    private static final String PASSWORD = "password123";
+    private static final String NAME = "Test User";
+
+    private MainPage mainPage;
+    private LoginPage loginPage;
+    private String accessToken;
 
     @Before
     public void setUp() {
-        Configuration.browserSize = "1920x1080";
+        setupBrowser();
+
+        // Создание пользователя через API перед тестом
+        var response = UserApi.createUser(EMAIL, PASSWORD, NAME);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+
+        mainPage = new MainPage();
+        loginPage = new LoginPage();
+    }
+
+    @After
+    public void tearDown() {
+        // Удаление пользователя после теста
+        if (accessToken != null) {
+            UserCleaner.deleteUser(accessToken);
+        }
+    }
+
+    private void setupBrowser() {
+        // Настройка браузера из системных переменных или свойств
+        String browser = System.getProperty("browser", "chrome");
+        Configuration.browser = browser;
+        Configuration.browserSize = System.getProperty("browserSize", "1920x1080");
+        Configuration.headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
     }
 
     @Test
     @Story("Login via main page button")
+    @Owner("Твоё Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход по кнопке 'Войти в аккаунт' на главной странице")
-    public void loginFromMainPageTest() {
-        step("Открываем главную страницу", () -> open("https://stellarburgers.nomoreparties.site/"));
-        MainPage mainPage = new MainPage();
-        step("Кликаем 'Войти в аккаунт'", mainPage::clickLoginButton);
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail(EMAIL));
-        step("Вводим пароль", () -> loginPage.setPassword(PASSWORD));
-        step("Нажимаем 'Войти'", loginPage::submitLogin);
-        step("Проверяем, что зашли — есть Личный кабинет", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+    public void loginViaMainPageButtonTest() {
+        open(BASE_URL);
+        mainPage.clickLoginButton();
+        loginPage.login(EMAIL, PASSWORD);
+        mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login via 'Личный кабинет'")
+    @Story("Login via personal cabinet")
+    @Owner("Твоё Имя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Вход через кнопку 'Личный кабинет' на главной странице")
+    @Description("Вход через кнопку 'Личный кабинет'")
     public void loginViaPersonalCabinetTest() {
-        step("Открываем главную страницу", () -> open("https://stellarburgers.nomoreparties.site/"));
-        MainPage mainPage = new MainPage();
-        step("Кликаем 'Личный кабинет'", mainPage::clickPersonalCabinet);
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail(EMAIL));
-        step("Вводим пароль", () -> loginPage.setPassword(PASSWORD));
-        step("Нажимаем 'Войти'", loginPage::submitLogin);
-        step("Проверяем, что зашли — есть Личный кабинет", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+        open(BASE_URL);
+        mainPage.clickPersonalCabinet();
+        loginPage.login(EMAIL, PASSWORD);
+        mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login from Registration form")
+    @Story("Login via registration page")
+    @Owner("Твоё Имя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Вход через ссылку 'Войти' в форме регистрации")
-    public void loginFromRegistrationPageTest() {
-        step("Открываем страницу регистрации", () -> open("https://stellarburgers.nomoreparties.site/register"));
-        RegistrationPage regPage = new RegistrationPage();
-        step("Кликаем 'Войти' внизу формы", regPage::clickLoginLink);
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail(EMAIL));
-        step("Вводим пароль", () -> loginPage.setPassword(PASSWORD));
-        step("Нажимаем 'Войти'", loginPage::submitLogin);
-        step("Проверяем, что зашли — есть Личный кабинет", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+    @Description("Вход через страницу регистрации")
+    public void loginViaRegistrationPageTest() {
+        open(BASE_URL + "/register");
+        loginPage.clickLoginLink();
+        loginPage.login(EMAIL, PASSWORD);
+        mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login from ForgotPassword form")
+    @Story("Login via password recovery page")
+    @Owner("Твоё Имя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Вход через ссылку 'Войти' в форме восстановления пароля")
-    public void loginFromForgotPasswordPageTest() {
-        step("Открываем страницу восстановления пароля", () -> open("https://stellarburgers.nomoreparties.site/forgot-password"));
-        ForgotPasswordPage forgotPage = new ForgotPasswordPage();
-        step("Кликаем 'Войти' внизу формы", forgotPage::clickLoginLink);
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail(EMAIL));
-        step("Вводим пароль", () -> loginPage.setPassword(PASSWORD));
-        step("Нажимаем 'Войти'", loginPage::submitLogin);
-        step("Проверяем, что зашли — есть Личный кабинет", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+    @Description("Вход через страницу восстановления пароля")
+    public void loginViaPasswordRecoveryTest() {
+        open(BASE_URL + "/forgot-password");
+        loginPage.clickLoginLink();
+        loginPage.login(EMAIL, PASSWORD);
+        mainPage.verifyUserLoggedIn();
     }
 }
