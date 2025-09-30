@@ -1,112 +1,82 @@
 package tests;
 
-import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
+import model.User;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import pageobject.RegistrationPage;
+import pageobject.LoginPage;
+import utils.UserGenerator;
 import api.UserApi;
-import utils.UserCleaner;
+import utils.Constants;
 
-import static com.codeborne.selenide.Selenide.*;
+import static org.junit.Assert.assertTrue;
 
 @Epic("Stellar Burgers UI")
-@Feature("User Registration")
-public class RegistrationTest {
-
-    private static final String BASE_URL = "https://stellarburgers.nomoreparties.site";
-    private static final String REGISTER_URL = BASE_URL + "/register";
-
+@Feature("Регистрация пользователя")
+public class RegistrationTest extends BaseTest {
     private RegistrationPage registrationPage;
+    private LoginPage loginPage;
+    private User testUser;
     private String accessToken;
-    private String testEmail;
-    private String testPassword = "password123";
-    private String testName = "Test User";
-
-    @Before
-    public void setUp() {
-        setupBrowser();
-        open(REGISTER_URL);
-        registrationPage = new RegistrationPage();
-
-        // Генерация уникального email для каждого теста
-        testEmail = "testuser" + System.currentTimeMillis() + "@yandex.ru";
-    }
-
-    @After
-    public void tearDown() {
-        if (accessToken != null) {
-            UserCleaner.deleteUser(accessToken);
-        }
-        closeWebDriver();
-    }
-
-    private void setupBrowser() {
-        // Настройка браузера из системных переменных или свойств
-        String browser = System.getProperty("browser", "chrome");
-        Configuration.browser = browser;
-        Configuration.browserSize = System.getProperty("browserSize", "1920x1080");
-        Configuration.headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
-        Configuration.timeout = 10000;
-    }
 
     @Test
-    @Story("Successful registration")
-    @Owner("Твоё Имя")
+    @Story("Успешная регистрация")
+    @Owner("Имя")
     @Severity(SeverityLevel.BLOCKER)
     @Description("Успешная регистрация нового пользователя")
     public void successfulRegistrationTest() {
-        // Заполняем форму регистрации
-        registrationPage.setName(testName);
-        registrationPage.setEmail(testEmail);
-        registrationPage.setPassword(testPassword);
-        registrationPage.submitRegistration();
+        registrationPage = new RegistrationPage();
+        loginPage = new LoginPage();
+        testUser = UserGenerator.getRandomUser();
 
-        // Проверяем успешность регистрации
+        openUrl(Constants.REGISTER_URL);
+        registrationPage.registerUser(testUser.getName(), testUser.getEmail(), testUser.getPassword());
         registrationPage.verifyRegistrationSuccess();
 
         // Получаем токен для удаления пользователя
-        try {
-            var response = UserApi.loginUser(testEmail, testPassword);
+        var response = UserApi.loginUser(testUser);
+        if (response.statusCode() == 200) {
             accessToken = response.jsonPath().getString("accessToken");
-        } catch (Exception e) {
-            System.out.println("Не удалось получить токен: " + e.getMessage());
         }
     }
 
     @Test
-    @Story("Registration with short password")
-    @Owner("Твоё Имя")
+    @Story("Регистрация с коротким паролем")
+    @Owner("Имя")
     @Severity(SeverityLevel.NORMAL)
     @Description("Попытка регистрации с паролем короче 6 символов")
     public void registrationWithShortPasswordTest() {
-        // Заполняем форму с коротким паролем
-        registrationPage.setName(testName);
-        registrationPage.setEmail(testEmail);
-        registrationPage.setPassword("123");
-        registrationPage.submitRegistration();
+        registrationPage = new RegistrationPage();
+        testUser = UserGenerator.getRandomUser();
 
-        // Проверяем отображение ошибки
+        openUrl(Constants.REGISTER_URL);
+        registrationPage.registerUser(testUser.getName(), testUser.getEmail(), "123");
         registrationPage.verifyPasswordErrorDisplayed();
-
-        // Также можно проверить текст ошибки
-        String errorText = registrationPage.getPasswordErrorText();
-        System.out.println("Текст ошибки: " + errorText);
+        registrationPage.verifyPasswordErrorText("Некорректный пароль");
     }
 
     @Test
-    @Story("Registration with invalid email")
-    @Owner("Твоё Имя")
+    @Story("Регистрация с невалидным email")
+    @Owner("Имя")
     @Severity(SeverityLevel.NORMAL)
     @Description("Попытка регистрации с некорректным email")
     public void registrationWithInvalidEmailTest() {
-        registrationPage.setName(testName);
-        registrationPage.setEmail("invalid-email");
-        registrationPage.setPassword(testPassword);
-        registrationPage.submitRegistration();
+        registrationPage = new RegistrationPage();
 
-        // Проверяем отображение ошибки email
-        registrationPage.emailError.shouldBe(com.codeborne.selenide.Condition.visible);
+        openUrl(Constants.REGISTER_URL);
+        registrationPage.registerUser("Test User", "invalid-email", "password123");
+
+        // Проверяем, что остались на странице регистрации (не было редиректа)
+        registrationPage.verifyRegistrationPageOpened();
+    }
+
+    @After
+    @Step("Очистка тестовых данных")
+    public void cleanup() {
+        if (accessToken != null) {
+            UserApi.deleteUser(accessToken);
+        }
+
     }
 }

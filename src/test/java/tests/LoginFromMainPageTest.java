@@ -1,47 +1,54 @@
 package tests;
 
-import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
-import org.junit.Before;
+import model.User;
+import org.junit.After;
 import org.junit.Test;
 import pageobject.MainPage;
 import pageobject.LoginPage;
-
-import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Selenide.*;
-import static io.qameta.allure.Allure.step;
+import utils.UserGenerator;
+import api.UserApi;
+import utils.Constants;
 
 @Epic("Stellar Burgers UI")
-@Feature("Login from Main Page")
-public class LoginFromMainPageTest {
-
-    @Before
-    public void setUp() {
-        Configuration.browserSize = "1920x1080";
-        step("Открываем главную страницу", () -> {
-            open("https://stellarburgers.nomoreparties.site/");
-        });
-    }
+@Feature("Вход с главной страницы")
+public class LoginFromMainPageTest extends BaseTest {
+    private MainPage mainPage;
+    private LoginPage loginPage;
+    private User testUser;
+    private String accessToken;
 
     @Test
-    @Story("Login via 'Войти в аккаунт' с главной страницы")
-    @Owner("Твоё Имя") // <-- замени на своё имя, если нужно
+    @Story("Вход через кнопку 'Войти в аккаунт' с главной страницы")
+    @Owner("Имя")
     @Severity(SeverityLevel.BLOCKER)
     @Description("Проверка логина через главную страницу по кнопке 'Войти в аккаунт'")
     public void loginFromMainPageTest() {
-        MainPage mainPage = new MainPage();
+        prepareTestData();
 
-        step("Нажать 'Войти в аккаунт' на главной", () -> {
-            mainPage.loginButton.click();
-        });
+        openUrl(Constants.BASE_URL);
+        mainPage.clickLoginButton();
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
+        mainPage.verifyUserLoggedIn();
+    }
 
-        LoginPage loginPage = new LoginPage();
-        step("Ввести e-mail", () -> loginPage.setEmail("teran6315@yandex.ru"));
-        step("Ввести пароль", () -> loginPage.setPassword("766912"));
-        step("Нажать 'Войти'", loginPage::submitLogin);
+    @Step("Подготовка тестовых данных")
+    private void prepareTestData() {
+        mainPage = new MainPage();
+        loginPage = new LoginPage();
 
-        step("Проверить, что после логина видна кнопка 'Личный кабинет'", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+        testUser = UserGenerator.getRandomUser();
+        var response = UserApi.createUser(testUser);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+    }
+
+    @After
+    @Step("Очистка тестовых данных")
+    public void cleanup() {
+        if (accessToken != null) {
+            UserApi.deleteUser(accessToken);
+        }
     }
 }

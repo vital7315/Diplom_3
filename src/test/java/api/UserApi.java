@@ -1,57 +1,29 @@
 package api;
 
 import io.restassured.response.Response;
+import model.User;
 import static io.restassured.RestAssured.given;
+import utils.Constants;
 
 public class UserApi {
 
-    public static Response createUser(String email, String password, String name) {
-        User user = new User(email, password, name);
-
+    public static Response createUser(User user) {
         return given()
                 .header("Content-type", "application/json")
                 .body(user)
-                .post("/api/auth/register");
+                .post(Constants.BASE_URL + Constants.API_REGISTER);
     }
 
-    public static Response loginUser(String email, String password) {
-        UserCredentials credentials = new UserCredentials(email, password);
-
+    public static Response loginUser(User user) {
         return given()
                 .header("Content-type", "application/json")
-                .body(credentials)
-                .post("/api/auth/login");
+                .body(user)
+                .post(Constants.BASE_URL + Constants.API_LOGIN);
     }
 
-    // Вспомогательные классы для сериализации в JSON
-    public static class User {
-        private String email;
-        private String password;
-        private String name;
-
-        public User(String email, String password, String name) {
-            this.email = email;
-            this.password = password;
-            this.name = name;
-        }
-
-        // Getters для сериализации
-        public String getEmail() { return email; }
-        public String getPassword() { return password; }
-        public String getName() { return name; }
-    }
-
-    public static class UserCredentials {
-        private String email;
-        private String password;
-
-        public UserCredentials(String email, String password) {
-            this.email = email;
-            this.password = password;
-        }
-
-        // Getters для сериализации
-        public String getEmail() { return email; }
-        public String getPassword() { return password; }
+    public static Response deleteUser(String accessToken) {
+        return given()
+                .header("Authorization", accessToken)
+                .delete(Constants.BASE_URL + Constants.API_USER);
     }
 }

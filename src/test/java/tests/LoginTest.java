@@ -1,61 +1,64 @@
 package tests;
 
-import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
-import org.junit.Before;
+import model.User;
+import org.junit.After;
 import org.junit.Test;
 import pageobject.LoginPage;
-
-import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Condition.text;
-import static com.codeborne.selenide.Selenide.*;
-import static io.qameta.allure.Allure.step;
-
-import java.time.Duration;
+import utils.UserGenerator;
+import api.UserApi;
+import utils.Constants;
 
 @Epic("Stellar Burgers UI")
-@Feature("Login")
-public class LoginTest {
-
-    @Before
-    public void setUp() {
-        Configuration.browserSize = "1920x1080";
-        step("Открываем страницу логина", () -> {
-            open("https://stellarburgers.nomoreparties.site/login");
-        });
-    }
+@Feature("Авторизация")
+public class LoginTest extends BaseTest {
+    private LoginPage loginPage;
+    private User testUser;
+    private String accessToken;
 
     @Test
-    @Story("Login with valid credentials")
-    @Owner("Твоё Имя")
+    @Story("Вход с валидными учетными данными")
+    @Owner("Имя")
     @Severity(SeverityLevel.BLOCKER)
     @Description("Вход с корректными логином и паролем")
     public void loginWithValidCredentialsTest() {
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail("teran6315@yandex.ru"));
-        step("Вводим пароль", () -> loginPage.setPassword("766912"));
-        step("Нажимаем кнопку 'Войти'", loginPage::submitLogin);
+        prepareTestData();
 
-        step("Проверяем, что открылась главная страница (кнопка 'Личный кабинет' видна)", () -> {
-            $("a.AppHeader_header__link__3D_hX[href='/account']").shouldBe(visible);
-        });
+        openUrl(Constants.LOGIN_URL);
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
+        loginPage.verifyLoginPageOpened(); // Должен произойти редирект
     }
 
     @Test
-    @Story("Login with invalid credentials")
-    @Owner("Твоё Имя")
+    @Story("Вход с невалидными учетными данными")
+    @Owner("Имя")
     @Severity(SeverityLevel.NORMAL)
     @Description("Попытка входа с некорректным паролем — должна появиться ошибка")
     public void loginWithInvalidPasswordTest() {
-        LoginPage loginPage = new LoginPage();
-        step("Вводим e-mail", () -> loginPage.setEmail("screwy4@yandex.ru"));
-        step("Вводим неверный пароль", () -> loginPage.setPassword("неверныйПароль123"));
-        step("Нажимаем кнопку 'Войти'", loginPage::submitLogin);
+        loginPage = new LoginPage();
 
-        step("Проверяем, что появляется сообщение об ошибке", () -> {
-            $("p.input__error")
-                    .shouldBe(visible, Duration.ofSeconds(8))
-                    .shouldHave(text("Некорректный пароль"));
-        });
+        openUrl(Constants.LOGIN_URL);
+        loginPage.login("invalid@yandex.ru", "wrongpassword");
+        loginPage.verifyPasswordErrorDisplayed();
+        loginPage.verifyPasswordErrorText("Некорректный пароль");
+    }
+
+    @Step("Подготовка тестовых данных")
+    private void prepareTestData() {
+        loginPage = new LoginPage();
+
+        testUser = UserGenerator.getRandomUser();
+        var response = UserApi.createUser(testUser);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+    }
+
+    @After
+    @Step("Очистка тестовых данных")
+    public void cleanup() {
+        if (accessToken != null) {
+            UserApi.deleteUser(accessToken);
+        }
     }
 }

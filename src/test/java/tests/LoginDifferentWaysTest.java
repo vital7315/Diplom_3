@@ -1,105 +1,102 @@
 package tests;
 
-import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
+import model.User;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import pageobject.MainPage;
 import pageobject.LoginPage;
+import pageobject.ForgotPasswordPage;
+import pageobject.RegistrationPage;
+import utils.UserGenerator;
 import api.UserApi;
-import utils.UserCleaner;
-
-import static com.codeborne.selenide.Selenide.*;
+import utils.Constants;
 
 @Epic("Stellar Burgers UI")
-@Feature("Login Different Ways")
-public class LoginDifferentWaysTest {
-
-    private static final String BASE_URL = "https://stellarburgers.nomoreparties.site";
-    private static final String EMAIL = "testuser" + System.currentTimeMillis() + "@yandex.ru";
-    private static final String PASSWORD = "password123";
-    private static final String NAME = "Test User";
-
+@Feature("Различные способы входа")
+public class LoginDifferentWaysTest extends BaseTest {
     private MainPage mainPage;
     private LoginPage loginPage;
+    private ForgotPasswordPage forgotPasswordPage;
+    private RegistrationPage registrationPage;
+    private User testUser;
     private String accessToken;
 
-    @Before
-    public void setUp() {
-        setupBrowser();
-
-        // Создание пользователя через API перед тестом
-        var response = UserApi.createUser(EMAIL, PASSWORD, NAME);
-        if (response.statusCode() == 200) {
-            accessToken = response.jsonPath().getString("accessToken");
-        }
-
-        mainPage = new MainPage();
-        loginPage = new LoginPage();
-    }
-
-    @After
-    public void tearDown() {
-        // Удаление пользователя после теста
-        if (accessToken != null) {
-            UserCleaner.deleteUser(accessToken);
-        }
-    }
-
-    private void setupBrowser() {
-        // Настройка браузера из системных переменных или свойств
-        String browser = System.getProperty("browser", "chrome");
-        Configuration.browser = browser;
-        Configuration.browserSize = System.getProperty("browserSize", "1920x1080");
-        Configuration.headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
-    }
-
     @Test
-    @Story("Login via main page button")
-    @Owner("Твоё Имя")
+    @Story("Вход через кнопку на главной странице")
+    @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход по кнопке 'Войти в аккаунт' на главной странице")
     public void loginViaMainPageButtonTest() {
-        open(BASE_URL);
+        prepareTestData();
+
+        openUrl(Constants.BASE_URL);
         mainPage.clickLoginButton();
-        loginPage.login(EMAIL, PASSWORD);
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
         mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login via personal cabinet")
-    @Owner("Твоё Имя")
+    @Story("Вход через личный кабинет")
+    @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через кнопку 'Личный кабинет'")
     public void loginViaPersonalCabinetTest() {
-        open(BASE_URL);
+        prepareTestData();
+
+        openUrl(Constants.BASE_URL);
         mainPage.clickPersonalCabinet();
-        loginPage.login(EMAIL, PASSWORD);
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
         mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login via registration page")
-    @Owner("Твоё Имя")
+    @Story("Вход через страницу регистрации")
+    @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через страницу регистрации")
     public void loginViaRegistrationPageTest() {
-        open(BASE_URL + "/register");
-        loginPage.clickLoginLink();
-        loginPage.login(EMAIL, PASSWORD);
+        prepareTestData();
+
+        openUrl(Constants.REGISTER_URL);
+        registrationPage.clickLoginLink();
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
         mainPage.verifyUserLoggedIn();
     }
 
     @Test
-    @Story("Login via password recovery page")
-    @Owner("Твоё Имя")
+    @Story("Вход через страницу восстановления пароля")
+    @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через страницу восстановления пароля")
     public void loginViaPasswordRecoveryTest() {
-        open(BASE_URL + "/forgot-password");
-        loginPage.clickLoginLink();
-        loginPage.login(EMAIL, PASSWORD);
+        prepareTestData();
+
+        openUrl(Constants.FORGOT_PASSWORD_URL);
+        forgotPasswordPage.clickLoginLink();
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
         mainPage.verifyUserLoggedIn();
+    }
+
+    @Step("Подготовка тестовых данных")
+    private void prepareTestData() {
+        mainPage = new MainPage();
+        loginPage = new LoginPage();
+        forgotPasswordPage = new ForgotPasswordPage();
+        registrationPage = new RegistrationPage();
+
+        testUser = UserGenerator.getRandomUser();
+        var response = UserApi.createUser(testUser);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+    }
+
+    @After
+    @Step("Очистка тестовых данных")
+    public void cleanup() {
+        if (accessToken != null) {
+            UserApi.deleteUser(accessToken);
+        }
     }
 }

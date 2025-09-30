@@ -6,16 +6,19 @@ import io.qameta.allure.selenide.AllureSelenide;
 
 public class BrowserConfig {
 
-    public static void setUp(String browser) {
-        // Настройки Selenide
-        Configuration.browser = browser;
-        Configuration.timeout = 8000;
-        Configuration.browserSize = "1920x1080";
+    public static void setupBrowser() {
+        String browser = System.getProperty("browser", Constants.DEFAULT_BROWSER);
+        String browserSize = System.getProperty("browserSize", Constants.DEFAULT_BROWSER_SIZE);
+        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
 
-        // Настройка Allure для Selenide
+        Configuration.browser = browser;
+        Configuration.browserSize = browserSize;
+        Configuration.headless = headless;
+        Configuration.timeout = 10000;
+
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide()
-                .screenshots(true)    // Делать скриншоты при падении тестов
-                .savePageSource(true) // Сохранять исходный код страницы
+                .screenshots(true)
+                .savePageSource(true)
         );
     }
 }

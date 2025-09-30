@@ -1,48 +1,82 @@
 package tests;
 
-import com.codeborne.selenide.Configuration;
 import io.qameta.allure.*;
+import model.User;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import pageobject.MainPage;
+import pageobject.ConstructorPage;
 import pageobject.LoginPage;
+import pageobject.MainPage;
+import utils.UserGenerator;
+import api.UserApi;
+import utils.Constants;
 
-import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Selenide.*;
+import static com.codeborne.selenide.Selenide.open;
 
 @Epic("Stellar Burgers UI")
-@Feature("Burger Constructor")
-public class ConstructorTest {
-
-    private static final String BASE_URL = "https://stellarburgers.nomoreparties.site";
-    private static final String LOGIN_URL = BASE_URL + "/login";
-
+@Feature("Конструктор бургеров")
+public class ConstructorTest extends BaseTest {
+    private ConstructorPage constructorPage;
     private MainPage mainPage;
     private LoginPage loginPage;
+    private User testUser;
+    private String accessToken;
 
     @Before
-    public void setUp() {
-        Configuration.browserSize = "1920x1080";
-        open(LOGIN_URL);
-
+    @Step("Подготовка тестовых данных")
+    public void prepareTestData() {
+        constructorPage = new ConstructorPage();
         mainPage = new MainPage();
         loginPage = new LoginPage();
 
-        // Логин через PO методы
-        loginPage.login("teran6315@yandex.ru", "766912");
+        // Создание тестового пользователя
+        testUser = UserGenerator.getRandomUser();
+        var response = UserApi.createUser(testUser);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+
+        open(Constants.LOGIN_URL);
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
     }
 
     @Test
-    @Story("Navigation between ingredient sections")
-    @Owner("Твоё Имя")
+    @Story("Навигация к разделу 'Булки")
+    @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Проверка переключения между разделами конструктора бургеров")
-    public void constructorSectionNavigationTest() {
-        mainPage.clickBunsSection();
-        mainPage.clickSaucesSection();
-        mainPage.clickFillingsSection();
+    @Description("Проверка переключения на раздел 'Булки'")
+    public void switchToBunsSectionTest() {
+        constructorPage.clickSaucesTab();
+        constructorPage.clickBunsTab();
+        constructorPage.verifyBunsSectionActive();
+    }
 
-        // Проверки через PO методы
-        mainPage.verifySaucesSectionActive();
+    @Test
+    @Story("Навигация к разделу 'Соусы")
+    @Owner("Имя")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Проверка переключения на раздел 'Соусы'")
+    public void switchToSaucesSectionTest() {
+        constructorPage.clickSaucesTab();
+        constructorPage.verifySaucesSectionActive();
+    }
+
+    @Test
+    @Story("Навигация к разделу 'Начинки")
+    @Owner("Имя")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Проверка переключения на раздел 'Начинки'")
+    public void switchToFillingsSectionTest() {
+        constructorPage.clickFillingsTab();
+        constructorPage.verifyFillingsSectionActive();
+    }
+
+    @After
+    @Step("Очистка тестовых данных")
+    public void cleanup() {
+        if (accessToken != null) {
+            UserApi.deleteUser(accessToken);
+        }
     }
 }

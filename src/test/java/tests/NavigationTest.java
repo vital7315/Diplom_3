@@ -12,8 +12,8 @@ import api.UserApi;
 import utils.Constants;
 
 @Epic("Stellar Burgers UI")
-@Feature("Профиль пользователя")
-public class ProfileTest extends BaseTest {
+@Feature("Навигация")
+public class NavigationTest extends BaseTest {
     private LoginPage loginPage;
     private ProfilePage profilePage;
     private MainPage mainPage;
@@ -21,11 +21,11 @@ public class ProfileTest extends BaseTest {
     private String accessToken;
 
     @Test
-    @Story("Переход в личный кабинет")
+    @Story("Переход из профиля в конструктор через кнопку")
     @Owner("Имя")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка перехода в ЛК и наличия кнопки 'Выйти'")
-    public void goToPersonalCabinetTest() {
+    @Description("Переход из личного кабинета в конструктор по кнопке 'Конструктор'")
+    public void navigateFromProfileToConstructorViaButtonTest() {
         prepareTestData();
 
         openUrl(Constants.LOGIN_URL);
@@ -33,7 +33,25 @@ public class ProfileTest extends BaseTest {
 
         mainPage.clickPersonalCabinet();
         profilePage.verifyProfilePageOpened();
-        profilePage.verifyProfileLinkActive();
+        profilePage.clickConstructorButton();
+        mainPage.verifyMainPageOpened();
+    }
+
+    @Test
+    @Story("Переход из профиля в конструктор через логотип")
+    @Owner("Имя")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Переход из личного кабинета в конструктор по логотипу")
+    public void navigateFromProfileToConstructorViaLogoTest() {
+        prepareTestData();
+
+        openUrl(Constants.LOGIN_URL);
+        loginPage.login(testUser.getEmail(), testUser.getPassword());
+
+        mainPage.clickPersonalCabinet();
+        profilePage.verifyProfilePageOpened();
+        profilePage.clickLogo();
+        mainPage.verifyMainPageOpened();
     }
 
     @Step("Подготовка тестовых данных")

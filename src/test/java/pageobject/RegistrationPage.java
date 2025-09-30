@@ -1,64 +1,69 @@
 package pageobject;
 
 import com.codeborne.selenide.SelenideElement;
+import io.qameta.allure.Step;
 import static com.codeborne.selenide.Selenide.*;
+import static com.codeborne.selenide.Condition.*;
 
 public class RegistrationPage {
-    public SelenideElement nameInput = $x("//label[text()='Имя']/following-sibling::input");
-    public SelenideElement emailInput = $x("//label[text()='Email']/following-sibling::input");
-    public SelenideElement passwordInput = $x("//label[text()='Пароль']/following-sibling::input");
-    public SelenideElement registerButton = $x("//button[contains(text(),'Зарегистрироваться')]");
-    public SelenideElement passwordError = $x("//p[contains(@class, 'input__error') or contains(text(), 'Некорректный пароль')]");
-    public SelenideElement emailError = $x("//p[contains(@class, 'input__error') and contains(text(), 'Email')]");
-    public SelenideElement loginLink = $x("//a[@href='/login']");
+    private SelenideElement nameInput = $x("//label[text()='Имя']/following-sibling::input");
+    private SelenideElement emailInput = $x("//label[text()='Email']/following-sibling::input");
+    private SelenideElement passwordInput = $x("//label[text()='Пароль']/following-sibling::input");
+    private SelenideElement registerButton = $x("//button[contains(text(),'Зарегистрироваться')]");
+    private SelenideElement passwordError = $x("//p[contains(@class, 'input__error')]");
+    private SelenideElement loginLink = $x("//a[@href='/login']");
 
+    @Step("Ввести имя: {name}")
     public void setName(String name) {
         nameInput.setValue(name);
     }
 
+    @Step("Ввести email: {email}")
     public void setEmail(String email) {
         emailInput.setValue(email);
     }
 
+    @Step("Ввести пароль")
     public void setPassword(String password) {
         passwordInput.setValue(password);
     }
 
-    public void submitRegistration() {
+    @Step("Нажать кнопку 'Зарегистрироваться'")
+    public void clickRegisterButton() {
         registerButton.click();
     }
 
-    // Клик по ссылке "Войти" на странице регистрации
+    @Step("Кликнуть по ссылке 'Войти'")
     public void clickLoginLink() {
         loginLink.click();
     }
 
-    // Получить текст ошибки пароля
-    public String getPasswordErrorText() {
-        return passwordError.getText();
-    }
-
-    // Получить текст ошибки email (если есть)
-    public String getEmailErrorText() {
-        return emailError.getText();
-    }
-
-    // Метод для полной регистрации пользователя
+    @Step("Зарегистрировать пользователя: {name}, {email}")
     public void registerUser(String name, String email, String password) {
         setName(name);
         setEmail(email);
         setPassword(password);
-        submitRegistration();
+        clickRegisterButton();
     }
 
-    // Метод для проверки успешной регистрации (должен быть перенаправлен на логин)
-    public void verifyRegistrationSuccess() {
-        // Проверяем, что произошло перенаправление на страницу логина
-        webdriver().driver().getWebDriver().getCurrentUrl().contains("/login");
-    }
-
-    // Метод для проверки отображения ошибки пароля
+    @Step("Проверить отображение ошибки пароля")
     public void verifyPasswordErrorDisplayed() {
-        passwordError.shouldBe(com.codeborne.selenide.Condition.visible);
+        passwordError.shouldBe(visible);
+    }
+
+    @Step("Проверить текст ошибки пароля: {expectedError}")
+    public void verifyPasswordErrorText(String expectedError) {
+        passwordError.shouldHave(text(expectedError));
+    }
+
+    @Step("Проверить успешную регистрацию")
+    public void verifyRegistrationSuccess() {
+        // После успешной регистрации должна открыться страница логина
+        $x("//button[contains(text(), 'Войти')]").shouldBe(visible);
+    }
+
+    @Step("Проверить, что страница регистрации открыта")
+    public void verifyRegistrationPageOpened() {
+        registerButton.shouldBe(visible);
     }
 }
