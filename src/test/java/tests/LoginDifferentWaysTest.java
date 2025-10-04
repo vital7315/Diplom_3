@@ -3,6 +3,7 @@ package tests;
 import io.qameta.allure.*;
 import model.User;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import pageobject.MainPage;
 import pageobject.LoginPage;
@@ -22,14 +23,27 @@ public class LoginDifferentWaysTest extends BaseTest {
     private User testUser;
     private String accessToken;
 
+    @Before
+    @Step("Подготовка тестовых данных")
+    public void prepareTestData() {
+        mainPage = new MainPage();
+        loginPage = new LoginPage();
+        forgotPasswordPage = new ForgotPasswordPage();
+        registrationPage = new RegistrationPage();
+
+        testUser = UserGenerator.getRandomUser();
+        var response = UserApi.createUser(testUser);
+        if (response.statusCode() == 200) {
+            accessToken = response.jsonPath().getString("accessToken");
+        }
+    }
+
     @Test
     @Story("Вход через кнопку на главной странице")
     @Owner("Имя")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход по кнопке 'Войти в аккаунт' на главной странице")
     public void loginViaMainPageButtonTest() {
-        prepareTestData();
-
         openUrl(Constants.BASE_URL);
         mainPage.clickLoginButton();
         loginPage.login(testUser.getEmail(), testUser.getPassword());
@@ -42,8 +56,6 @@ public class LoginDifferentWaysTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через кнопку 'Личный кабинет'")
     public void loginViaPersonalCabinetTest() {
-        prepareTestData();
-
         openUrl(Constants.BASE_URL);
         mainPage.clickPersonalCabinet();
         loginPage.login(testUser.getEmail(), testUser.getPassword());
@@ -56,8 +68,6 @@ public class LoginDifferentWaysTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через страницу регистрации")
     public void loginViaRegistrationPageTest() {
-        prepareTestData();
-
         openUrl(Constants.REGISTER_URL);
         registrationPage.clickLoginLink();
         loginPage.login(testUser.getEmail(), testUser.getPassword());
@@ -70,26 +80,10 @@ public class LoginDifferentWaysTest extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Description("Вход через страницу восстановления пароля")
     public void loginViaPasswordRecoveryTest() {
-        prepareTestData();
-
         openUrl(Constants.FORGOT_PASSWORD_URL);
         forgotPasswordPage.clickLoginLink();
         loginPage.login(testUser.getEmail(), testUser.getPassword());
         mainPage.verifyUserLoggedIn();
-    }
-
-    @Step("Подготовка тестовых данных")
-    private void prepareTestData() {
-        mainPage = new MainPage();
-        loginPage = new LoginPage();
-        forgotPasswordPage = new ForgotPasswordPage();
-        registrationPage = new RegistrationPage();
-
-        testUser = UserGenerator.getRandomUser();
-        var response = UserApi.createUser(testUser);
-        if (response.statusCode() == 200) {
-            accessToken = response.jsonPath().getString("accessToken");
-        }
     }
 
     @After
